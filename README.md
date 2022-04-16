@@ -1,2 +1,2 @@
 # scrapping-analysis
-A repository of the scrapping and analysis code implemented to build the training data of the face recognition model, and the main analysis for the scrapped data.   
+A repository of the scrapping code implemented to scrape the data of the website and Facebook page of the most important and inspirational platform for helping in finding missing people in the Egyptian locale:  "Atfal Mafkoda أطفال مفقودة", also containing the analysis of that data that were used to build critical decisions about the face recognition model and the app UI/UX flow itself.     
