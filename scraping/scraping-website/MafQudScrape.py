@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from urllib3.util import Retry
 from translate import Translator
 from requests.adapters import HTTPAdapter
-from Cleaning.arabic_content import ARABIC_MAPPING, GOVS_MAPPING_V2
+from ..data-preprocessing.arabic_content import ARABIC_MAPPING, GOVS_MAPPING_V2
 
 
 def session_request(url, stream=False):
@@ -19,9 +19,11 @@ def session_request(url, stream=False):
     response = session.get(url, stream=stream)
     return response
 
-def extract_people_url(url): 
+
+def extract_people_url(url):
     """
-    Extract the page of each missing person on Atfal Mafkoda website based on the url. 
+    Extract the page of each missing person on Atfal Mafkoda website based on the url. \
+
     Parameters
     ----------
     url : str
@@ -36,8 +38,9 @@ def extract_people_url(url):
     response = session_request(url)
     content = response.content
     soup = BeautifulSoup(content, 'html.parser')
-    for tag in soup.find_all('button', {'class':'btn ebtn-4 ebtn-sm p-1','data-target':'#modal_persons_missing'}):
-        cnt.append({"id": int(tag['data-id']), "URL": "https://atfalmafkoda.com" + tag['data-url']})
+    for tag in soup.find_all('button', {'class': 'btn ebtn-4 ebtn-sm p-1', 'data-target': '#modal_persons_missing'}):
+        cnt.append(
+            {"id": int(tag['data-id']), "URL": "https://atfalmafkoda.com" + tag['data-url']})
     return cnt
 
 
@@ -45,7 +48,7 @@ def find_gov(content):
     """
     Search for the government name in the arabic text content and return the arabic and english
     government name based on the GOVS_MAPPING dict.
-    
+
     Parameters
     ----------
     content : str
@@ -63,10 +66,11 @@ def find_gov(content):
         if content.find(gov) >= 0:
             gov_arabic = gov
             gov_english = GOVS_MAPPING_V2[gov]
-            return gov_arabic, gov_english 
+            return gov_arabic, gov_english
     gov_arabic = 'مفقود'
     gov_english = 'Null'
     return gov_arabic, gov_english
+
 
 def translate_content(content, from_language='ar', to_language='en'):
     """
@@ -74,7 +78,7 @@ def translate_content(content, from_language='ar', to_language='en'):
     language (mostly: 'ar') to another (mostly: 'en') using 
     translate open source library. 
     Note: the library has daily limited times of usage. 
-    
+
     Parameters
     ----------
     content : str
@@ -88,18 +92,17 @@ def translate_content(content, from_language='ar', to_language='en'):
     content_translated : str 
         string of the translated content.
     """
-    
     translator = Translator(from_lang=from_language, to_lang=to_language)
     content_translated = translator.translate(content)
 
     return content_translated
 
-   
+
 def mapping_to_english(name):
     """
-     Mapping the Arabic name to English using list of 
-     pre-written dict according to ARABIC_MAPPING.
-     
+    Mapping the Arabic name to English using list of 
+    pre-written dict according to ARABIC_MAPPING.
+
     Parameters
     ----------
     name : str
@@ -109,14 +112,14 @@ def mapping_to_english(name):
     names_mapped : str
         string of the mapped name.
     """
- 
+
     mapped_name = ""
-    for c in name: 
-        try: 
+    for c in name:
+        try:
             mapped_name += ARABIC_MAPPING[c]
-        except: 
+        except:
             mapped_name += c
-    
+
     return mapped_name.title()
 
 
@@ -131,35 +134,38 @@ def extract_people_info(base, mapping_method="mapping"):
     mapping_method : str, optional
         the method of mapping the arabic name to english name. 
         methods: mapping (default), translating. 
-                                               
+
     Returns
     -------
     base : dict
         the dict of the data about the person after appending the data.
     """
-    
+
     print('********   Extracting INFO   ************')
     response = session_request(base['URL'])
     content = response.content
     soup = BeautifulSoup(content, 'html.parser')
-    name_arabic = soup.find('h2', {"class":"person_name"}).text.strip()
+    name_arabic = soup.find('h2', {"class": "person_name"}).text.strip()
     base['Name_Arabic'] = name_arabic
-    if mapping_method=="translating": 
-        base['Name_English'] = translate_content(name_arabic)    
-    elif mapping_method=="mapping":
-        base['Name_English'] = mapping_to_english(name_arabic) 
-    else: 
-        base['Name_English'] = mapping_to_english(name_arabic) 
-    print(base['Name_English'] + ", " +  base['Name_Arabic']) 
-    base['Government_Arabic'], base['Government_English'] = find_gov(soup.find('p', {'class': 'date_loss'}).text)
-    cnt = soup.find_all('h4', {"class":"date_loss"})
+    if mapping_method == "translating":
+        base['Name_English'] = translate_content(name_arabic)
+    elif mapping_method == "mapping":
+        base['Name_English'] = mapping_to_english(name_arabic)
+    else:
+        base['Name_English'] = mapping_to_english(name_arabic)
+    print(base['Name_English'] + ", " + base['Name_Arabic'])
+    base['Government_Arabic'], base['Government_English'] = find_gov(
+        soup.find('p', {'class': 'date_loss'}).text)
+    cnt = soup.find_all('h4', {"class": "date_loss"})
     base['Missing_Date'] = cnt[0].text.replace("\n", "").strip()
     base['Current_Age'] = cnt[1].text.replace("\n", "").strip()
     base['image'] = []
     for photo in soup.find_all('img', {"class": "img-fluid"}):
         if photo['alt'].strip() == base['Name_Arabic'].strip():
             base['image'].append("https://atfalmafkoda.com/" + photo['src'])
+
     return base
+
 
 def downlad_extracted_img(base, save_path):
     """
@@ -184,20 +190,20 @@ def downlad_extracted_img(base, save_path):
     base['imageRefExtra'] = []
     n = len(imageURLs)
     # Prevent any duplicated images by just downloading half of them
-    if n%2 == 0: 
+    if n % 2 == 0:
         n = n//2
-    else: 
+    else:
         n = n//2 + 1
     for i in range(n):
         imageURL = imageURLs[i]
         r = session_request(imageURL, stream=True)
         r.raw.decode_content = True
-        currentImagName= imgName + str(i) + '.jpg'
+        currentImagName = imgName + str(i) + '.jpg'
         print(f"Downloading {fileName} ---- {currentImagName} .....")
         base['imageRefExtra'].append(currentImagName)
         with open(f'{save_path}/{fileName}/{currentImagName}', 'wb') as f:
             shutil.copyfileobj(r.raw, f)
-    
+
 
 def extract_people_info_download_image(pageURL, save_path):
     """
@@ -222,6 +228,7 @@ def extract_people_info_download_image(pageURL, save_path):
         sleep(20)
     return peapleInfo
 
+
 def extract_missing_people_info_to_json(save_path="dataset", number_of_pages=-1):
     """
     Extract the information from all pages (limited bt number_of_pages) and save 
@@ -239,12 +246,14 @@ def extract_missing_people_info_to_json(save_path="dataset", number_of_pages=-1)
     """
     page = 1
     data = []
-    if number_of_pages == -1: number_of_pages = 90
+    if number_of_pages == -1:
+        number_of_pages = 90
     while page <= number_of_pages:
-        data = extract_people_info_download_image(f'https://atfalmafkoda.com/ar/seen-him?page={page}&per-page=18', f'{save_path}/images')
+        data = extract_people_info_download_image(
+            f'https://atfalmafkoda.com/ar/seen-him?page={page}&per-page=18', f'{save_path}/images')
         write_json(data, f"{save_path}/missing_people.json")
         print("\n==>JSON file with page {} scrapped data is successfully scraped in directory".format(page))
-        page+=1
+        page += 1
         sleep(100)
         print("="*70)
     print("\n==>All images are scrapped and downloaded successfully in directory: {}".format(save_path))
@@ -253,8 +262,8 @@ def extract_missing_people_info_to_json(save_path="dataset", number_of_pages=-1)
 
 # function to add to JSON
 def write_json(new_data, filename):
-    with open(filename,'a+') as file:
-          # First we load existing data into a dict.
+    with open(filename, 'a+') as file:
+        # First we load existing data into a dict.
         file_data = json.load(file)
         # Join new_data with file_data inside emp_details
         for i in new_data:
@@ -262,7 +271,10 @@ def write_json(new_data, filename):
         # Sets file's current position at offset.
         file.seek(0)
         # convert back to json.
-        json.dump(file_data, file, indent = 4, ensure_ascii = False)
-if __name__ == '__main__': 
-    SAVE_DIR = r"data_not_ready"   # You may need to change the SAVE_DIR to another directory
+        json.dump(file_data, file, indent=4, ensure_ascii=False)
+
+
+if __name__ == '__main__':
+    # You may need to change the SAVE_DIR to another directory
+    SAVE_DIR = r"data_not_ready"
     extract_missing_people_info_to_json(SAVE_DIR)
